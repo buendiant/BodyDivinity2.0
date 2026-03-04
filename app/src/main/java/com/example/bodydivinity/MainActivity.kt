@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,18 +14,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,44 +42,84 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.bodydivinity.ui.theme.BodyDivinityTheme
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.Room
+import com.example.bodydivinity.AppDatabase
+import com.example.bodydivinity.Food
+import com.example.bodydivinity.FoodViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+@Entity(tableName = "foods")
+data class Food(
+
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+
+    val name: String,
+    val calories: Int,
+    val protein: Int,
+    val carbs: Int,
+    val fat: Int
+)
 
 class MainActivity : ComponentActivity() {
+
+    private val db by lazy {
+        Room.databaseBuilder(
+            applicationContext,
+            AppDatabase::class.java,
+            "food_database"
+        ).build()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val factory = FoodViewModelFactory(db.foodDao())
+
         setContent {
-            BodyDivinityTheme {
-                CaloriesScreen()
-            }
+            val viewModel: FoodViewModel = viewModel(factory = factory)
+            CaloriesScreen(viewModel)
         }
+
     }
 }
 
+private fun RoomDatabase.Builder<AppDatabase>.addCallback(callback: Any) {}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CaloriesScreen() {
-    var foods by remember { mutableStateOf(listOf<Food>()) }
+fun CaloriesScreen(viewModel: FoodViewModel) {
+    val foods by viewModel.foods.collectAsState()
     var calories by remember { mutableStateOf(0) }
     var totalProtein by remember { mutableStateOf(0) }
     var totalCarbs by remember { mutableStateOf(0) }
     var totalFat by remember { mutableStateOf(0) }
+    var showSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
+            /*if (isExpanded) {
+                Box(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primary)
+                        .fillMaxWidth()
+                        .height(700.dp)
+                        .clickable{}
+                        .width(2.dp)
+
+                ){}
+            }*/
+
             FloatingActionButton(
                 onClick = {
-                    val food = Food(
-                        name = "Pizza",
-                        calories = 285,
-                        protein = 12,
-                        carbs = 55,
-                        fat = 12
-                    )
-                    totalFat += food.fat!!
-                    totalCarbs += food.carbs!!
-                    totalProtein += food.protein!!
-                    calories += food.calories!!
-                    foods = foods + food //Agrega la comida a la lista
+                    showSheet = true
                 },
                 containerColor = MaterialTheme.colorScheme.primary, // Color del tema
                 shape = RoundedCornerShape(16.dp) // Aquí aplicas lo que aprendimos antes
@@ -87,6 +132,38 @@ fun CaloriesScreen() {
         // El contenido de tu pantalla va aquí
         Column(modifier = Modifier.padding(innerPadding)) {
             // Tu Row con fondo redondeado puede ir aquí
+        }
+    }
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+
+                Text("Seleccionar comida", fontSize = 20.sp)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = {
+                        viewModel.addFoodByName("Carne de res (100g)")
+                    }
+                ) {
+                    Text("Agregar Carne")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Button(onClick = {
+                    // aquí luego abrirás formulario personalizado
+                }) {
+                    Text("Crear nueva comida")
+                }
+            }
         }
     }
 
@@ -136,18 +213,7 @@ fun CaloriesScreen() {
 
         Button(
             onClick = {
-                val food = Food(
-                    name = "Pizza",
-                    calories = 285,
-                    protein = 12,
-                    carbs = 55,
-                    fat = 12
-                )
-                totalFat += food.fat!!
-                totalCarbs += food.carbs!!
-                totalProtein += food.protein!!
-                calories += food.calories!!
-                foods = foods + food //Agrega la comida a la lista
+
             }
 
         ) {
@@ -196,12 +262,6 @@ fun CaloriesScreen() {
                 )
                 Button(
                     onClick = {
-                        // Eliminar comida al hacer clic
-                        foods = foods - food
-                        calories -= food.calories!!
-                        totalProtein -= food.protein!!
-                        totalCarbs -= food.carbs!!
-                        totalFat -= food.fat!!
 
                     }
 

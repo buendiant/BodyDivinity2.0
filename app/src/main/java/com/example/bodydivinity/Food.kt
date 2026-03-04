@@ -1,9 +1,15 @@
-package com.example.bodydivinity
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
-class Food(
-    var name: String? = null,
-    var calories: Int? = null,
-    var protein: Int? = null,
-    var carbs: Int? = null,
-    var fat: Int? = null
+@Entity(tableName = "foods")
+data class Food(
+
+    @PrimaryKey(autoGenerate = true)
+    val id: Int = 0,
+
+    val name: String,
+    val calories: Int,
+    val protein: Int,
+    val carbs: Int,
+    val fat: Int
 )
